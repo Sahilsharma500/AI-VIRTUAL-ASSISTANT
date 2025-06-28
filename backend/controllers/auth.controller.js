@@ -41,16 +41,16 @@ export const signUp = async(req, res) => {
 
 export const logIn = async(req, res) => {
     try{
-        const {name, email, password} = req.body;
+        const {email, password} = req.body;
 
-        if(!name || !email || !password) return res.status(400).json({message: "Invalid Credentials"});
+        if(!email || !password) return res.status(400).json({message: "Invalid Credentials"});
 
         const user = await User.findOne({email});
 
         if(!user) return res.status(400).json({message:"Email does not exist!"});
 
         const isMatch = await bcrypt.compare(password, user.password);
-
+        
         if(!isMatch){
             return res.status(400).json({message: "incorrect password"});
         }
