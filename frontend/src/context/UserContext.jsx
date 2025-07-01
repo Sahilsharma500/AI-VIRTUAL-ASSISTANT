@@ -21,7 +21,18 @@ const UserContext = ({children}) => {
     }
     useEffect(() => {
       handleCurrentUser();
-    },[])
+    },[]);
+
+    const getGeminiResponse = async (command) => {
+      try{
+        const result = await axios.post(`${serverUrl}/api/user/asktoassistant`, {command}, {withCredentials: true});
+        return result.data;
+      }
+      catch(error){
+        console.log(error);
+      }
+    }
+
     const value = {
         serverUrl,
         userData,
@@ -31,7 +42,8 @@ const UserContext = ({children}) => {
         backendImage, 
         setBackendImage,
         selectedImage, 
-        setSelectedImage
+        setSelectedImage,
+        getGeminiResponse,
     }
   return (
     <div>

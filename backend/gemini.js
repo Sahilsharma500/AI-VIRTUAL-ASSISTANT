@@ -1,3 +1,4 @@
+
 import axios from 'axios'
 
 const geminiResponse =async(command, assistantName, userName) => {
@@ -10,10 +11,10 @@ const geminiResponse =async(command, assistantName, userName) => {
             Your task is to understand the user's natural language input and respond with a JSON object like this:
 
             {
-            "type": "general" | "google_search" | "youtube_search" | "youtube_play" |
-            "get_time" | "get_date" | "get_day" | "get_month" | "calculator_open" |
-            "instagram_open" | "facebook_open" | "weather-show",
-            "userinput": "<original user input> {only remove your name from userinput if exists} and agar kisi ne google ya youtube pe kuch search karne ko bola hai to userInput me only bo search baala text jaye,",
+            "type": "general" | "google-search" | "youtube-search" | "youtube-play" |
+            "get-time" | "get-date" | "get-day" | "get-month" | "calculator-open" |
+            "instagram-open" | "facebook-open" | "weather-show",
+            "userInput": "<original user input> {only remove your name from userinput if exists} and agar kisi ne google ya youtube pe kuch search karne ko bola hai to userInput me only bo search baala text jaye,",
             "response": "<a short spoken response to read out loud to the user>"
 
             }
@@ -38,7 +39,7 @@ const geminiResponse =async(command, assistantName, userName) => {
             - "get_month": if user asks for the current month.
 
             Important:
-            - Use "{author name}" agar koi puche tumhe kisne banaya
+            - Use ${userName} agar koi puche tumhe kisne banaya
             - Only respond with the JSON object, nothing else.
 
             now your userInput: ${command}
