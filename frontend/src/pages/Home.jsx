@@ -1,4 +1,4 @@
-import React, {useContext} from 'react'
+import React, {useContext, useRef, useState} from 'react'
 import { UserDataContext } from '../context/userContext';
 import { data, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -6,6 +6,10 @@ import { useEffect } from 'react';
 const Home = () => {
   const { userData, serverUrl, setUserData, getGeminiResponse } = useContext(UserDataContext);
   const navigate = useNavigate();
+  const [listening, setListening] = useState(false);
+  const isSpeakingRef = useRef(false);
+  const recognitionRef = useRef(null);
+  const synth = window.speechSynthesis;
   const handleLogOut = async() => {
     try{
       const result = await axios.get(`${serverUrl}/api/auth/logout`, {withCredentials: true});
@@ -18,9 +22,59 @@ const Home = () => {
     }
   }
 
+  const startRecognition = () => {
+  try {
+    recognitionRef.current?.start();
+    setListening(true);
+  } catch (error) {
+    if (!error.message.includes("start")) {
+      console.error("Recognition error:", error);
+    }
+  }
+};
+
+
   const speak = (text) => {
     const utterance = new SpeechSynthesisUtterance(text);
-    window.speechSynthesis.speak(utterance);
+    isSpeakingRef.current = true;
+    utterance.onend=() => {
+      isSpeakingRef.current = false;
+      startRecognition();
+    }
+    synth.speak(utterance);
+  }
+
+  const handleCommand =(data) => {
+    const {type, userInput, response} = data;
+    speak(response);
+
+    if (type === 'google-search') {
+    const query = encodeURIComponent(userInput);
+    window.open(`https://www.google.com/search?q=${query}`, '_blank');
+    }
+
+    if (type === 'calculator-open') {
+        window.open(`https://www.google.com/search?q=calculator`, '_blank');
+    }
+
+    if (type === 'instagram-open') {
+        window.open(`https://www.instagram.com/`, '_blank');
+    }
+
+    if (type === "facebook-open") {
+    window.open(`https://www.facebook.com/`, '_blank');
+    }
+
+    if (type === "weather-show") {
+        window.open(`https://www.google.com/search?q=weather`, '_blank');
+    }
+
+    if (type === 'youtube-search' || type === 'youtube-play') {
+        const query = encodeURIComponent(userInput);
+        window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
+    }
+
+    
   }
 
   useEffect(() => {
@@ -30,17 +84,81 @@ const Home = () => {
     recognition.continuous = true;
     recognition.lang='en-US';
 
+    recognitionRef.current = recognition
+
+    const isRecognizingRef = {current: false}
+
+    const safeRecognition = () => {
+      if(!isSpeakingRef.current && !isRecognizingRef.current){
+        try{
+          recognition.start();
+          console.log("Recognition requested to start")
+        }
+        catch(error){
+          if(error.name !== "InvalidStateError"){
+            console.error("Start error:", err);
+          }
+        }
+
+      }
+    };
+    recognition.onstart = () => {
+      console.log("Recognition started ...");
+      isRecognizingRef.current = true;
+      setListening(true);
+    }
+
+    recognition.onend = () => {
+      console.log("Recognition ended");
+      isRecognizingRef.current = false;
+      setListening(false);
+
+      if(!isSpeakingRef.current){
+        setTimeout(() => {
+          safeRecognition()
+        }, 1000); //delay avoids rapid loop
+      }
+    };
+
+    recognition.onerror = (event) => {
+    console.warn("Recognition error:", event.error);
+    isRecognizingRef.current = false;
+    setListening(false);
+
+    if (event.error !== "aborted" && !isSpeakingRef.current) {
+      setTimeout(() => {
+        safeRecognition();
+      }, 1000);
+    }
+  };
+
     recognition.onresult = async (e) => {
       const transcript = e.results[e.results.length-1][0].transcript.trim();
       console.log("heard: " + transcript);
       
       if(transcript.toLowerCase().includes(userData.assistantName.toLowerCase())){
+        recognition.stop();
+        isRecognizingRef.current = false;
+        setListening(false);
         const data = await getGeminiResponse(transcript);
         console.log(data);
-        speak(data.response);
+        handleCommand(data);
       }
     }
-    recognition.start();
+
+    const fallback = setInterval(() => {
+      if(!isSpeakingRef.current && !isRecognizingRef.current){
+        safeRecognition()
+      }
+    }, 10000);
+    safeRecognition();
+    return () => {
+      recognition.stop();
+      setListening(false);
+      isRecognizingRef.current=false;
+      clearInterval(fallback);
+    }
+    
   }, [])
 
     return (
